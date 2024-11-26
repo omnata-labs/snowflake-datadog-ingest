@@ -1,0 +1,48 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Deploy app",
+        "type": "shell",
+        "command": "snow app run --environment dev",
+        "presentation": {
+          "reveal": "silent"
+        },
+        "options": {
+          "env": {}
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Zip handler files",
+        "type": "shell",
+        "command": "find . -name '*.py' | zip datadog_handlers.zip -@",
+        "presentation": {
+          "reveal": "silent"
+        },
+        "options": {
+          "env": {},
+          "cwd": "${workspaceFolder}/app"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Compile .proto files",
+        "type": "shell",
+        "command": "protoc --proto_path=. --mypy_out=readable_stubs:../app/datadog_proto --python_out=../app/datadog_proto tracer_payload.proto span.proto stats.proto agent",
+        "presentation": {
+          "reveal": "silent"
+        },
+        "options": {
+          "env": {},
+          "cwd": "${workspaceFolder}/app"
+        },
+        "problemMatcher": []
+      }
+    ],
+  }
+  
+  
+  

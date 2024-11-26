@@ -1,0 +1,22 @@
+# This is a project definition file, a required component if you intend to use Snowflake CLI in a project directory such as this template.
+
+definition_version: 2
+entities:
+  pkg:
+    type: application package
+    identifier: <% fn.concat_ids('snowflake_datadog_ingest_pkg', ctx.env.suffix) %>
+    artifacts:
+      - src: app/*
+        dest: ./
+    
+    manifest: app/manifest.yml
+    
+  app:
+    type: application
+    from:
+      target: pkg
+    identifier: <% fn.concat_ids('snowflake_datadog_ingest', ctx.env.suffix) %>
+
+env:
+  suffix: <% fn.concat_ids('_', fn.sanitize_id(fn.get_username('unknown_user')) | lower) %>
+

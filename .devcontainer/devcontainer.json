@@ -1,0 +1,36 @@
+{
+	"name": "Python 3 (Microsoft)",
+	"image": "mcr.microsoft.com/devcontainers/python:3.10",
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli:1": {
+			"installDirectlyFromGitHubRelease": true,
+			"version": "latest"
+		}
+	},
+	"postCreateCommand": "./.devcontainer/post-create.sh",
+    // pass through environment variables from the host
+	"runArgs": [
+        //"--env-file", "${localWorkspaceFolder}/.devcontainer/.env"
+    ],
+	// provide access to snowflake credentials on the host
+	"mounts": [
+    	"source=${localEnv:HOME}/.config/snowflake,target=/home/vscode/.config/snowflake,type=bind,consistency=cached",
+	]
+	,
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-toolsai.jupyter",
+				"ms-python.python",
+				"jimasp.behave-vsc",
+				"ms-python.black-formatter"
+			]
+		}
+	}
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
