@@ -1,6 +1,7 @@
 import requests
 from requests.adapters import HTTPAdapter
 import json
+import _snowflake
 from typing import List,Dict,Literal
 from datadog_proto.agent_payload_pb2 import AgentPayload
 from datadog_proto.tracer_payload_pb2 import TracerPayload, TraceChunk
@@ -28,7 +29,7 @@ class DatadogUploader:
     def __init__(self):
       self._log_messages:List[Dict]=[]
       self._span_messages:List[Dict]=[]
-      self.api_key = 'bc975b0f395f5f3bd467e26a02e9e2f1' #_snowflake.get_generic_secret_string('api_key')
+      self.api_key = _snowflake.get_generic_secret_string('api_key')
       retry_strategy = Retry(
         total=4,  # maximum number of retries
         status_forcelist=[403, 429, 500, 502, 503, 504],  # the HTTP status codes to retry on
@@ -219,5 +220,5 @@ class DatadogUploader:
         yield (response.text,)
 
     def end_partition(self):
-      self.do_log_messages_upload()
-      self.do_span_messages_upload()
+      yield from self.do_log_messages_upload()
+      yield from self.do_span_messages_upload()
