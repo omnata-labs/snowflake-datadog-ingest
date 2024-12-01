@@ -64,10 +64,21 @@ class DatadogUploader:
         for log_message in self._log_messages:
           if 'TRACE' in log_message:
             if 'trace_id' in log_message['TRACE']:
-              log_message['dd.trace_id'] = translate_trace_id(log_message['TRACE']['trace_id'])
-              log_message['trace_id'] = log_message['dd.trace_id']
+              log_message['trace_id'] = translate_trace_id(log_message['TRACE']['trace_id'])
             if 'span_id' in log_message['TRACE']:
-              log_message['dd.span_id'] = translate_span_id(log_message['TRACE']['span_id'])
+              log_message['span_id'] = translate_span_id(log_message['TRACE']['span_id'])
+          
+          if 'RECORD_ATTRIBUTES' in log_message:
+            if 'trace_id' in log_message['RECORD_ATTRIBUTES']:
+              log_message['trace_id'] = translate_trace_id(log_message['RECORD_ATTRIBUTES']['trace_id'])
+            if 'span_id' in log_message['RECORD_ATTRIBUTES']:
+              log_message['span_id'] = translate_span_id(log_message['RECORD_ATTRIBUTES']['span_id'])
+          
+          if 'trace_id' in log_message:
+            log_message['dd.trace_id'] = str(log_message['trace_id'])
+          if 'span_id' in log_message:
+            log_message['dd.span_id'] = str(log_message['span_id'])
+
           log_message['service'] = log_message.get('service', 'unknown')
           log_message['message'] = log_message.get('VALUE', None)
           del log_message['VALUE']
