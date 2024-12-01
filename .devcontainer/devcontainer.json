@@ -10,11 +10,12 @@
 	"postCreateCommand": "./.devcontainer/post-create.sh",
     // pass through environment variables from the host
 	"runArgs": [
-        //"--env-file", "${localWorkspaceFolder}/.devcontainer/.env"
+		"--env-file", "${localWorkspaceFolder}/.devcontainer/.env",
+		"--name", "snowflake-datadog-ingest"
     ],
 	// provide access to snowflake credentials on the host
 	"mounts": [
-    	"source=${localEnv:HOME}/.config/snowflake,target=/home/vscode/.config/snowflake,type=bind,consistency=cached",
+    	"source=${localEnv:HOME}/.config/snowflake,target=/home/vscode/.config/snowflake,type=bind,consistency=cached"
 	]
 	,
 	"customizations": {
