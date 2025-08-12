@@ -48,6 +48,9 @@ class DatadogUploader:
         self._log_messages.append(payload)
       elif record_type == 'METRIC':
         pass
+      elif record_type == 'EVENT':
+        # these are typically system audit things, like task completion
+        pass
       else:
         raise ValueError(f"Unknown record type: {record_type}")
 
