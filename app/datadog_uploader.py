@@ -28,6 +28,7 @@ def translate_span_id(span_id):
 class DatadogUploader:
     def __init__(self):
       self._log_messages:List[Dict]=[]
+      self._metrics_events:List[Dict]=[]
       self._span_messages:List[Dict]=[]
       self.api_key = _snowflake.get_generic_secret_string('api_key')
       retry_strategy = Retry(
@@ -47,7 +48,7 @@ class DatadogUploader:
       elif record_type == 'LOG':
         self._log_messages.append(payload)
       elif record_type == 'METRIC':
-        pass
+        self._metrics_events.append(payload)
       elif record_type == 'EVENT':
         # these are typically system audit things, like task completion
         pass
@@ -58,6 +59,8 @@ class DatadogUploader:
         yield from self.do_span_messages_upload()
       if len(self._log_messages) >= 100:
         yield from self.do_log_messages_upload()
+      if len(self._metrics_events) >= 100:
+        yield from self.do_metrics_upload()
 
     def do_log_messages_upload(self):
       if len(self._log_messages) > 0:
@@ -100,6 +103,54 @@ class DatadogUploader:
           })
         response.raise_for_status()    
         self._log_messages=[]
+        yield (response.text,)
+    
+    def do_metrics_upload(self):
+      if len(self._metrics_events) > 0:
+        # https://docs.datadoghq.com/api/latest/metrics/#submit-metrics
+        metrics_to_upload = []
+        for metric in self._metrics_events:
+          # The type of metric. The available types are 0 (unspecified), 1 (count), 2 (rate), and 3 (gauge). Allowed enum values: 0,1,2,3
+          metric_type_raw:Literal['sum','count','rate','gauge'] = metric.get('RECORD').get('metric_type')
+          metric_type_number:Literal[0,1,2,3] = 0
+          if metric_type_raw == 'sum':
+            metric_type_number = 1
+          elif metric_type_raw == 'count':
+            metric_type_number = 1
+          elif metric_type_raw == 'rate':
+            metric_type_number = 2
+          elif metric_type_raw == 'gauge':
+            metric_type_number = 3
+          # the RECORD_ATTRIBUTES are name-value pairs that we can use for slicing and dicing the metrics in datadog
+          # e.g. {  "stream_name": "stream_b","sync_slug": "my-sync-slug", "direction": "inbound" }
+          # we will convert these to a list of Datadog resource objects (name,type)
+          resources = []
+          for key, value in metric.get('RECORD_ATTRIBUTES', {}).items():
+            resources.append({
+              "name": str(value),
+              "type": str(key),
+            })
+          metrics_to_upload.append({
+            "metric": metric.get('RECORD').get('metric').get('name', 'unknown'), # type: ignore
+            "points": [{
+              "timestamp": int(metric.get('date', 0)),
+              "value": float(metric.get('VALUE', 0))
+            }],
+            "resources": resources,
+            "type": metric.get('type', metric_type_number),
+            "unit": metric.get('RECORD').get('metric').get('unit', 'unknown'), # type: ignore
+            #"tags": metric.get('tags', []),
+          })
+        #for metric in metrics_to_upload:
+        #  yield ("Uploading metric: " + str(metric),)
+        response = self._session.post(
+          "https://api.us3.datadoghq.com/api/v2/series",
+          json={"series": metrics_to_upload},
+          headers={
+            "DD-API-KEY":self.api_key
+          })
+        response.raise_for_status()    
+        self._metrics_events=[]
         yield (response.text,)
 
     def do_span_messages_upload(self,):
@@ -201,16 +252,17 @@ class DatadogUploader:
               else:
                 meta[key] = str(value)
             spans.append(Span(
-              service=span.get('service', 'unknown'),
+              service=str(span.get('service', 'unknown')).lower(),
               name=span.get('name', 'unknown'),
               resource=span.get('resource', 'unknown'),
               traceID=trace_id,
               spanID=span.get('span_id', 0),
               parentID=span.get('parent_id', 0),
-              start=span.get('date', 0),
+              start=span.get('start', 0),
               duration=span.get('duration', 0),
               meta=meta,
               error=0,
+              type="custom",
             ))
           trace_chunk = TraceChunk(
             priority = 1,
@@ -223,9 +275,11 @@ class DatadogUploader:
         url = "https://trace.agent.us3.datadoghq.com/api/v0.2/traces"
         headers = {
             "Dd-Api-Key": self.api_key,
+            "X-Datadog-Trace-Count": str(len(traces)),
+            "Datadog-Send-Real-Http-Status": "true",
             "Content-Type": "application/x-protobuf",
             "X-Datadog-Reported-Languages": "python",
-            #"User-Agent": "Datadog Trace Agent/7.59.0",
+            "User-Agent": "Datadog Trace Agent/7.59.0",
         }
         agent_payload_serialized = agent_payload.SerializeToString()
         response = self._session.post(url, headers=headers, data=agent_payload_serialized)
@@ -236,3 +290,4 @@ class DatadogUploader:
     def end_partition(self):
       yield from self.do_log_messages_upload()
       yield from self.do_span_messages_upload()
+      yield from self.do_metrics_upload()
