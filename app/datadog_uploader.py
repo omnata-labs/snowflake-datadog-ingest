@@ -123,23 +123,24 @@ class DatadogUploader:
             metric_type_number = 3
           # the RECORD_ATTRIBUTES are name-value pairs that we can use for slicing and dicing the metrics in datadog
           # e.g. {  "stream_name": "stream_b","sync_slug": "my-sync-slug", "direction": "inbound" }
-          # we will convert these to a list of Datadog resource objects (name,type)
-          resources = []
+          # we will convert these to a list of Datadog tags (key:value)
+          tags = []
           for key, value in metric.get('RECORD_ATTRIBUTES', {}).items():
-            resources.append({
-              "name": str(value),
-              "type": str(key),
-            })
+            tags.append(f"{key}:{value}")
+          # same for RESOURCE_ATTRIBUTES except we will exclude any keys containing 'query'
+          for key, value in metric.get('RESOURCE_ATTRIBUTES', {}).items():
+            if 'query' not in key.lower():
+              tags.append(f"{key}:{value}")
           metrics_to_upload.append({
             "metric": metric.get('RECORD').get('metric').get('name', 'unknown'), # type: ignore
             "points": [{
               "timestamp": int(metric.get('date', 0)),
               "value": float(metric.get('VALUE', 0))
             }],
-            "resources": resources,
+            #"resources": resources,
             "type": metric.get('type', metric_type_number),
             "unit": metric.get('RECORD').get('metric').get('unit', 'unknown'), # type: ignore
-            #"tags": metric.get('tags', []),
+            "tags": tags,
           })
         #for metric in metrics_to_upload:
         #  yield ("Uploading metric: " + str(metric),)
