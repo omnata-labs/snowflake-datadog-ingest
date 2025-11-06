@@ -114,7 +114,7 @@ class DatadogUploader:
           metric_type_raw:Literal['sum','count','rate','gauge'] = metric.get('RECORD').get('metric_type')
           metric_type_number:Literal[0,1,2,3] = 0
           if metric_type_raw == 'sum':
-            metric_type_number = 1
+            metric_type_number = 3 # using gauge because the sums coming from Snowflake are cumulative
           elif metric_type_raw == 'count':
             metric_type_number = 1
           elif metric_type_raw == 'rate':
